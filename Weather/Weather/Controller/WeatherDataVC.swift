@@ -10,29 +10,30 @@ import CoreLocation
 
 
 class WeatherDataVC: UIViewController {
-
+    
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     var selectedCity: CityViewModel?
     
     @IBOutlet weak var collectionView:UICollectionView!
     var data:[String.SubSequence : [List]]?
     var list = [List]()
+    var sortedArray: [String] = []
     var weatherData : [String.SubSequence : [List]] = [:]
-
+    
     @IBOutlet weak var tableView: UITableView!
     override func viewDidLoad() {
         super.viewDidLoad()
         self.tableView.register(UINib.init(nibName: "WeatherTableCell", bundle: nil), forCellReuseIdentifier: "WeatherTableCell")
-   
-//        if let selectedCity = selectedCity {
-//            fetchWeather(selectedCity)
-//        } else {
-//            startUserLocationService()
-//        }
-        localupdate()
+        
+        if let selectedCity = selectedCity {
+            fetchWeather(selectedCity)
+        } else {
+            startUserLocationService()
+        }
+        //        localupdate()
         // Do any additional setup after loading the view.
     }
-
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
@@ -50,11 +51,11 @@ class WeatherDataVC: UIViewController {
             self.activityIndicator.stopAnimating()
         }
     }
-
-    /// This method is used to fetch the data from 
+    
+    /// This method is used to fetch the data from
     private func localupdate() {
-       self.showActivityIndicator(show: true)
-         if let url = Bundle.main.url(forResource: "forecast", withExtension: "json") {
+        self.showActivityIndicator(show: true)
+        if let url = Bundle.main.url(forResource: "forecast", withExtension: "json") {
             do {
                 let data = try Data(contentsOf: url)
                 let weatherResponse = try JSONDecoder().decode(WeatherResponse.self, from: data)
@@ -66,6 +67,7 @@ class WeatherDataVC: UIViewController {
                     return element.dtTxt.prefix(10)
                 }
                 self.weatherData = Dictionary(grouping: datalist, by: predicate)
+                self.sortedArray =  self.sortDateArray()
                 DispatchQueue.main.async {
                     self.showActivityIndicator(show: false)
                     self.tableView.reloadData()
@@ -74,6 +76,30 @@ class WeatherDataVC: UIViewController {
                 
             }
         }
+    }
+    
+    private func sortDateArray() -> [String] {
+        let keysArray = Array(self.weatherData.keys)
+        var convertedArray: [Date] = []
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-mm-dd"// yyyy-MM-dd"
+        
+        for dat in keysArray {
+            let date = dateFormatter.date(from: String(dat))
+            if let date = date {
+                convertedArray.append(date)
+            }
+        }
+        convertedArray = convertedArray.sorted(by: { $0.compare($1) == .orderedAscending })
+        
+        var sortedArray: [String] = []
+        
+        for date in convertedArray {
+            sortedArray.append(dateFormatter.string(from: date))
+        }
+        print("sorted Array", sortedArray)
+        return sortedArray
     }
     
     private func startUserLocationService(){
@@ -91,14 +117,14 @@ class WeatherDataVC: UIViewController {
                 case .Success(let weatherResponse):
                     let datalist = weatherResponse.list
                     self.list = datalist
-                     self.title = weatherResponse.city.name + " , " +  weatherResponse.city.country
+                    self.title = weatherResponse.city.name + " , " +  weatherResponse.city.country
                     //GroupBy
                     let predicate = {(element : List) in
                         return element.dtTxt.prefix(10)
                     }
-
+                    
                     self.weatherData = Dictionary(grouping: datalist, by: predicate)
-                    print("data .count \(String(describing: self.data?.count))")
+                    self.sortedArray =  self.sortDateArray()
                     DispatchQueue.main.async {
                         self.showActivityIndicator(show: false)
                         self.tableView.reloadData()
@@ -109,21 +135,11 @@ class WeatherDataVC: UIViewController {
             }
         }
     }
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
 }
+
 //MARK: LocationServiceDelegate
-
 extension WeatherDataVC: LocationServiceDelegate {
-
+    
     func locationDidUpdate(_ service: LocationService, location: CLLocation) {
         print(location.coordinate.latitude,location.coordinate.longitude)
         
@@ -141,6 +157,7 @@ extension WeatherDataVC: LocationServiceDelegate {
                         return element.dtTxt.prefix(10)
                     }
                     self.weatherData = Dictionary(grouping: datalist, by: predicate)
+                    self.sortedArray =  self.sortDateArray()
                     DispatchQueue.main.async {
                         self.showActivityIndicator(show: false)
                         self.tableView.reloadData()
@@ -167,15 +184,11 @@ extension WeatherDataVC: LocationServiceDelegate {
 
 extension WeatherDataVC: UITableViewDataSource , UITableViewDelegate {
     func numberOfSections(in tableView: UITableView) -> Int {
-        return self.weatherData.keys.count
+        return self.sortedArray.count
     }
-//    func  tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-//        return 50
-//    }
     
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        let keys = Array(self.weatherData.keys)
-        return self.getDate(string: "\(keys[section])")
+        return self.getDate(string: "\(self.sortedArray[section])")
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -184,6 +197,7 @@ extension WeatherDataVC: UITableViewDataSource , UITableViewDelegate {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "WeatherTableCell", for: indexPath) as! WeatherTableCell
         let componentArray =  Array(self.weatherData.keys)
+        
         let key  = componentArray[indexPath.row]
         cell.data = self.weatherData[key]!
         return cell
