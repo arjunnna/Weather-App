@@ -1,0 +1,34 @@
+ [
+  {
+  "name":"Hyderabad",
+  "country": "India"
+  },
+  {
+  "name":"Banglore",
+  "country": "India"
+  },
+  {
+  "name":"Delhi",
+  "country": "India"
+  },
+  {
+  "name":"Chennai",
+  "country": "India"
+  },
+  {
+  "name":"Sydney",
+  "country": "Austalia"
+  },
+  {
+  "name":"New york",
+  "country": "America"
+  },
+  {
+  "name":"London",
+  "country": "United Kingdom"
+  },
+  {
+  "name":"Colombo",
+  "country": "Sri Lanka"
+    }
+  ]
